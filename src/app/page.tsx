@@ -19,7 +19,12 @@ const DEFAULT_LAT = 37.5665; // 서울 시청 (위치 허용 전 기본값)
 const DEFAULT_LNG = 126.978;
 
 export default function HomePage() {
-  const { latitude, longitude, loading: geoLoading, refetch } = useGeolocation();
+  const {
+    latitude,
+    longitude,
+    loading: geoLoading,
+    refetch,
+  } = useGeolocation();
   const [stations, setStations] = useState<Station[]>([]);
   const [avgPrice, setAvgPrice] = useState<number | undefined>();
   const [loading, setLoading] = useState(false);
@@ -37,19 +42,27 @@ export default function HomePage() {
     setError(null);
     try {
       const [aroundRes, avgRes] = await Promise.all([
-        fetch(`/api/gas/around?lat=${lat}&lng=${lng}&radius=${radius}&prodcd=${fuel}`),
+        fetch(
+          `/api/gas/around?lat=${lat}&lng=${lng}&radius=${radius}&prodcd=${fuel}`
+        ),
         fetch(`/api/gas/avg-all?prodcd=${fuel}`),
       ]);
       const aroundData = await aroundRes.json();
       const avgData = await avgRes.json();
       setStations(aroundData.stations ?? []);
       if (aroundData.error === "rate_limit") {
-        setError("오피넷 API 일일 호출 한도를 초과했습니다. 내일 다시 시도해 주세요.");
+        setError(
+          "오피넷 API 일일 호출 한도를 초과했습니다. 내일 다시 시도해 주세요."
+        );
       } else if (aroundData.error) {
-        setError("주유소 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        setError(
+          "주유소 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
+        );
       }
       // Opinet PRICE 필드는 string으로 반환됨
-      const rawPrice = avgData.OIL?.find((o: {PRODCD: string; PRICE: string}) => o.PRODCD === fuel)?.PRICE;
+      const rawPrice = avgData.OIL?.find(
+        (o: { PRODCD: string; PRICE: string }) => o.PRODCD === fuel
+      )?.PRICE;
       setAvgPrice(rawPrice ? Number(rawPrice) : undefined);
     } catch {
       setError("주유소 정보를 불러오지 못했습니다. 다시 시도해 주세요.");
@@ -66,7 +79,7 @@ export default function HomePage() {
     <div className="relative flex flex-col h-[100dvh] overflow-hidden pb-14">
       {/* 상단 헤더 */}
       <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-sm border-b border-gray-100">
-        <h1 className="text-lg font-bold text-orange-500">⛽ 주유췍</h1>
+        <h1 className="text-lg font-bold text-orange-500">⛽ 주유췤</h1>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowFilter((v) => !v)}
@@ -76,11 +89,18 @@ export default function HomePage() {
             <SlidersHorizontal className="w-5 h-5 text-gray-600" />
           </button>
           <button
-            onClick={() => { refetch(); fetchStations(); }}
+            onClick={() => {
+              refetch();
+              fetchStations();
+            }}
             className="p-2 rounded-full hover:bg-gray-100 transition-colors"
             aria-label="새로고침"
           >
-            <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`w-5 h-5 text-gray-600 ${
+                loading ? "animate-spin" : ""
+              }`}
+            />
           </button>
         </div>
       </header>
@@ -88,8 +108,20 @@ export default function HomePage() {
       {/* 필터 드롭다운 (헤더 아래) */}
       {showFilter && (
         <div className="absolute top-14 left-0 right-0 z-10 bg-white border-b border-gray-100 px-4 py-3 flex flex-wrap gap-3 shadow-sm">
-          <FuelFilter value={fuel} onChange={(v) => { setFuel(v); setShowFilter(false); }} />
-          <RadiusFilter value={radius} onChange={(v) => { setRadius(v); setShowFilter(false); }} />
+          <FuelFilter
+            value={fuel}
+            onChange={(v) => {
+              setFuel(v);
+              setShowFilter(false);
+            }}
+          />
+          <RadiusFilter
+            value={radius}
+            onChange={(v) => {
+              setRadius(v);
+              setShowFilter(false);
+            }}
+          />
         </div>
       )}
 
@@ -105,7 +137,10 @@ export default function HomePage() {
 
         {/* 현위치 버튼 */}
         <button
-          onClick={() => { setSelectedId(undefined); refetch(); }}
+          onClick={() => {
+            setSelectedId(undefined);
+            refetch();
+          }}
           className="absolute bottom-56 right-4 z-10 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-50 transition-colors"
           aria-label="현위치"
         >
@@ -136,7 +171,9 @@ export default function HomePage() {
 
         {/* 에러 */}
         {error && (
-          <div className="px-4 py-6 text-center text-sm text-red-500">{error}</div>
+          <div className="px-4 py-6 text-center text-sm text-red-500">
+            {error}
+          </div>
         )}
 
         {/* 로딩 스켈레톤 */}
@@ -162,15 +199,20 @@ export default function HomePage() {
           </div>
         )}
 
-        {!loading && stations.map((station) => (
-          <StationCard
-            key={station.id}
-            station={station}
-            avgPrice={avgPrice}
-            selected={selectedId === station.id}
-            onClick={() => setSelectedId(station.id === selectedId ? undefined : station.id)}
-          />
-        ))}
+        {!loading &&
+          stations.map((station) => (
+            <StationCard
+              key={station.id}
+              station={station}
+              avgPrice={avgPrice}
+              selected={selectedId === station.id}
+              onClick={() =>
+                setSelectedId(
+                  station.id === selectedId ? undefined : station.id
+                )
+              }
+            />
+          ))}
       </BottomSheet>
     </div>
   );
