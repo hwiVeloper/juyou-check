@@ -19,24 +19,30 @@ export async function GET(req: NextRequest) {
   }
 
   const katec = wgs84ToKatec(lat, lng);
-  console.log("[around] KATEC:", katec, "radius:", radius, "prodcd:", prodcd);
+  console.log("[around] lat:", lat, "lng:", lng, "→ KATEC:", katec, "radius:", radius, "prodcd:", prodcd);
 
-  const data = await fetchAroundStations(katec.x, katec.y, radius, prodcd, sort);
-  const stations = (data.RESULT?.OIL ?? []).map((s) => {
-    const brand = getBrandInfo(s.POLL_DIV_CD);
-    return {
-      id: s.UNI_ID,
-      name: s.OS_NM,
-      brand: brand.label,
-      brandCode: s.POLL_DIV_CD,
-      brandColor: brand.color,
-      price: Number(s.PRICE) || 0,
-      distance: s.DISTANCE,
-      address: s.NEW_ADR ?? s.VAN_ADR ?? s.ADDR ?? "",
-      lat: s.GIS_Y_COOR,
-      lng: s.GIS_X_COOR,
-    };
-  });
-
-  return NextResponse.json({ stations });
+  try {
+    const data = await fetchAroundStations(katec.x, katec.y, radius, prodcd, sort);
+    const stations = (data.RESULT?.OIL ?? []).map((s) => {
+      const brand = getBrandInfo(s.POLL_DIV_CD);
+      return {
+        id: s.UNI_ID,
+        name: s.OS_NM,
+        brand: brand.label,
+        brandCode: s.POLL_DIV_CD,
+        brandColor: brand.color,
+        price: Number(s.PRICE) || 0,
+        distance: s.DISTANCE,
+        address: s.NEW_ADR ?? s.VAN_ADR ?? s.ADDR ?? "",
+        lat: s.GIS_Y_COOR,
+        lng: s.GIS_X_COOR,
+      };
+    });
+    return NextResponse.json({ stations });
+  } catch (e) {
+    const msg = (e as Error).message;
+    const error = msg === "OPINET_EMPTY_RESPONSE" ? "rate_limit" : "api_error";
+    console.error("[around] Opinet error:", msg);
+    return NextResponse.json({ stations: [], error });
+  }
 }

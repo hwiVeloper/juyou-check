@@ -14,7 +14,7 @@ export function useGeolocation() {
     latitude: null,
     longitude: null,
     error: null,
-    loading: false,
+    loading: true,
   });
 
   const getLocation = () => {

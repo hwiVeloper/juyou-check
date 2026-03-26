@@ -43,6 +43,11 @@ export default function HomePage() {
       const aroundData = await aroundRes.json();
       const avgData = await avgRes.json();
       setStations(aroundData.stations ?? []);
+      if (aroundData.error === "rate_limit") {
+        setError("오피넷 API 일일 호출 한도를 초과했습니다. 내일 다시 시도해 주세요.");
+      } else if (aroundData.error) {
+        setError("주유소 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      }
       // Opinet PRICE 필드는 string으로 반환됨
       const rawPrice = avgData.OIL?.find((o: {PRODCD: string; PRICE: string}) => o.PRODCD === fuel)?.PRICE;
       setAvgPrice(rawPrice ? Number(rawPrice) : undefined);

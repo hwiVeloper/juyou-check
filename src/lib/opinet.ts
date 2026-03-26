@@ -44,13 +44,14 @@ async function opinetFetch<T>(
   const text = await res.text();
   if (!text || !text.trim()) {
     // 빈 응답 — 일일 호출 한도 초과 또는 일시적 오류
-    return { RESULT: { OIL: [] } } as unknown as T;
+    console.warn(`[opinet] Empty response from ${endpoint} — rate limit or server error`);
+    throw new Error("OPINET_EMPTY_RESPONSE");
   }
   try {
     return JSON.parse(text) as T;
   } catch {
-    console.error(`[opinet] JSON 파싱 실패 (${endpoint}):`, text.slice(0, 100));
-    return { RESULT: { OIL: [] } } as unknown as T;
+    console.error(`[opinet] JSON 파싱 실패 (${endpoint}):`, text.slice(0, 200));
+    throw new Error("OPINET_PARSE_ERROR");
   }
 }
 
