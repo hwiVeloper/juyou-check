@@ -56,10 +56,11 @@ export default function Top10Page() {
   useEffect(() => {
     setLoading(true);
 
-    // area 결정: 시군구 선택 시 4자리(시도2+시군구2), 시도만 선택 시 2자리, 전국은 미전달
+    // area 결정: areaCode.do 응답의 AREA_CD는 이미 4자리 전체 코드 (예: "0101")
+    // 시군구 선택 시 sigunArea 그대로 사용, 시도만 선택 시 sidoArea 2자리, 전국은 미전달
     const sido = sidoArea === "__all__" ? "" : sidoArea;
     const sigun = sigunArea === "__all__" ? "" : sigunArea;
-    const area = sigun ? `${sido}${sigun}` : sido;
+    const area = sigun || sido;  // sigun이 이미 4자리 전체 코드이므로 조합 불필요
 
     fetch(`/api/gas/top10?prodcd=${fuel}&area=${area}&cnt=10`)
       .then((r) => r.json())
@@ -101,7 +102,7 @@ export default function Top10Page() {
           <SelectTrigger className="w-36 h-9 text-sm">
             <SelectValue placeholder="전국" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="max-h-60 overflow-y-auto">
             <SelectItem value="__all__">전국</SelectItem>
             {sidoList.map((s) => (
               <SelectItem key={s.AREA_CD} value={s.AREA_CD}>{s.AREA_NM}</SelectItem>
@@ -115,7 +116,7 @@ export default function Top10Page() {
             <SelectTrigger className="w-36 h-9 text-sm">
               <SelectValue placeholder="전체" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-60 overflow-y-auto">
               <SelectItem value="__all__">전체</SelectItem>
               {sigunList.map((s) => (
                 <SelectItem key={s.AREA_CD} value={s.AREA_CD}>{s.AREA_NM}</SelectItem>

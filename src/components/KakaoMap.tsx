@@ -78,6 +78,7 @@ export default function KakaoMap({
   return (
     <Map
       center={center}
+      isPanto
       style={{ width: "100%", height: "100%" }}
       level={5}
     >

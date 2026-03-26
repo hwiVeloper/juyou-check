@@ -105,7 +105,7 @@ export default function HomePage() {
 
         {/* 현위치 버튼 */}
         <button
-          onClick={refetch}
+          onClick={() => { setSelectedId(undefined); refetch(); }}
           className="absolute bottom-56 right-4 z-10 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-50 transition-colors"
           aria-label="현위치"
         >
