@@ -51,6 +51,65 @@ export interface KatecCoord {
  * @param lng WGS84 경도 (도)
  * @returns KATEC 좌표 { x, y } (미터, 소수점 없이 반올림)
  */
+export interface Wgs84Coord {
+  lat: number;
+  lng: number;
+}
+
+/**
+ * KATEC(TM 중부원점) 좌표를 WGS84 경위도로 역변환합니다.
+ * Opinet 응답의 GIS_X_COOR(X=Easting), GIS_Y_COOR(Y=Northing)를 지도용 lat/lng로 변환할 때 사용.
+ */
+export function katecToWgs84(x: number, y: number): Wgs84Coord {
+  const x1 = x - FE;
+  const y1 = y - FN;
+
+  const M1 = y1 / K0 + meridianArc(LAT0);
+
+  // e1 파라미터
+  const sqrtTerm = Math.sqrt(1 - E2);
+  const e1 = (1 - sqrtTerm) / (1 + sqrtTerm);
+
+  // 발 위도(footprint latitude)
+  const mu = M1 / (A * (1 - E2 / 4 - (3 * E4) / 64 - (5 * E6) / 256));
+  const phi1 =
+    mu +
+    ((3 * e1) / 2 - (27 * e1 * e1 * e1) / 32) * Math.sin(2 * mu) +
+    ((21 * e1 * e1) / 16 - (55 * Math.pow(e1, 4)) / 32) * Math.sin(4 * mu) +
+    ((151 * e1 * e1 * e1) / 96) * Math.sin(6 * mu) +
+    ((1097 * Math.pow(e1, 4)) / 512) * Math.sin(8 * mu);
+
+  const sinPhi1 = Math.sin(phi1);
+  const cosPhi1 = Math.cos(phi1);
+  const tanPhi1 = Math.tan(phi1);
+
+  const nu1 = A / Math.sqrt(1 - E2 * sinPhi1 * sinPhi1);
+  const rho1 = (A * (1 - E2)) / Math.pow(1 - E2 * sinPhi1 * sinPhi1, 1.5);
+  const T1 = tanPhi1 * tanPhi1;
+  const C1 = (E2 / (1 - E2)) * cosPhi1 * cosPhi1;
+  const D = x1 / (nu1 * K0);
+
+  const phi =
+    phi1 -
+    (nu1 * tanPhi1 / rho1) * (
+      (D * D) / 2 -
+      (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * (E2 / (1 - E2))) * Math.pow(D, 4) / 24 +
+      (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 252 * (E2 / (1 - E2)) - 3 * C1 * C1) * Math.pow(D, 6) / 720
+    );
+
+  const lam =
+    LON0 +
+    (D -
+      (1 + 2 * T1 + C1) * Math.pow(D, 3) / 6 +
+      (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * (E2 / (1 - E2)) + 24 * T1 * T1) * Math.pow(D, 5) / 120
+    ) / cosPhi1;
+
+  return {
+    lat: phi / DEG_TO_RAD,
+    lng: lam / DEG_TO_RAD,
+  };
+}
+
 export function wgs84ToKatec(lat: number, lng: number): KatecCoord {
   const phi = lat * DEG_TO_RAD;
   const lam = lng * DEG_TO_RAD;

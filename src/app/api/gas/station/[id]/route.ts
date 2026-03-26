@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchStationDetail, getBrandInfo } from "@/lib/opinet";
+import { katecToWgs84 } from "@/lib/coord-transform";
 
 export async function GET(
   _req: NextRequest,
@@ -22,8 +23,14 @@ export async function GET(
     brandColor: brand.color,
     address: raw.NEW_ADR ?? raw.VAN_ADR ?? "",
     tel: raw.TEL ?? "",
-    lat: raw.GIS_Y_COOR ?? raw.LAT ?? 0,
-    lng: raw.GIS_X_COOR ?? raw.LON ?? 0,
+    // GIS_X_COOR/GIS_Y_COOR는 KATEC 좌표 (PDF 확인) → WGS84 변환
+    // detailById.do 응답에는 LON/LAT 필드 없음 (PDF 기준)
+    ...(() => {
+      if (raw.GIS_X_COOR && raw.GIS_Y_COOR) {
+        return katecToWgs84(raw.GIS_X_COOR, raw.GIS_Y_COOR);
+      }
+      return { lat: 0, lng: 0 };
+    })(),
     services: {
       carWash: raw.CAR_WASH_YN === "Y",
       maintenance: raw.MAINT_YN === "Y",

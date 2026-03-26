@@ -83,7 +83,7 @@ export interface OpinetAvgSidoResponse {
 }
 
 export interface OpinetSigunPrice {
-  SIGUNM: string;
+  SIGUNNM: string;  // PDF 기준 실제 필드명 (SIGUNM 아님)
   SIGUNCD: string;
   PRICE: number;
 }
@@ -171,27 +171,23 @@ export interface OpinetDetailResponse {
   };
 }
 
-export interface OpinetSidoCode {
-  SIDONM: string;
-  SIDOCD: string;
+/** areaCode.do 응답 — 시도/시군구 통합 코드 */
+export interface OpinetAreaCode {
+  AREA_CD: string;  // 시도 2자리 또는 시군구 4자리
+  AREA_NM: string;
 }
 
-export interface OpinetSidoResponse {
+export interface OpinetAreaResponse {
   RESULT: {
-    OIL: OpinetSidoCode[];
+    OIL: OpinetAreaCode[];
   };
 }
 
-export interface OpinetSigunCode {
-  SIGUNM: string;
-  SIGUNCD: string;
-}
-
-export interface OpinetSigunResponse {
-  RESULT: {
-    OIL: OpinetSigunCode[];
-  };
-}
+// 하위 호환용 alias
+export type OpinetSidoCode = OpinetAreaCode;
+export type OpinetSidoResponse = OpinetAreaResponse;
+export type OpinetSigunCode = OpinetAreaCode;
+export type OpinetSigunResponse = OpinetAreaResponse;
 
 // ─── API 호출 함수 ──────────────────────────────────────────────────────────
 
@@ -227,29 +223,40 @@ export async function fetchTrend(
   return opinetFetch<OpinetTrendResponse>("oilDt5AvgPrice.do", { prodcd });
 }
 
-/** 반경 내 주유소 목록 (KATEC 좌표 입력) */
+/** 반경 내 주유소 목록 (KATEC 좌표 입력)
+ *  radius: km 단위로 전달 → 내부에서 m로 변환 (API 단위: m, 최대 5000m=5km)
+ */
 export async function fetchAroundStations(
   x: number,    // KATEC X (Easting)
   y: number,    // KATEC Y (Northing)
-  radius: number, // km (1~5)
+  radius: number, // UI 단위 km (1~5) — API 전송 시 * 1000 하여 m로 변환
   prodcd: FuelCode = "B027",
   sort: 1 | 2 = 1 // 1=가격순, 2=거리순
 ): Promise<OpinetAroundResponse> {
   return opinetFetch<OpinetAroundResponse>("aroundAll.do", {
     x,
     y,
-    radius,
+    radius: radius * 1000, // km → m 변환 (PDF: 단위 m, 최대 5000)
     prodcd,
     sort,
   });
 }
 
-/** 최저가 TOP10 주유소 */
+/** 최저가 TOP10 주유소
+ *  area: PDF 기준 파라미터명 (이전 코드의 sido는 오류)
+ *    - 미전달: 전국
+ *    - 2자리: 시도 (ex: "01" = 서울)
+ *    - 4자리: 시군구 (ex: "0101" = 서울 종로구)
+ *  cnt: 조회건수 (기본 10, 최대 20)
+ */
 export async function fetchTop10(
   prodcd: FuelCode = "B027",
-  sido: string = "01" // 전국
+  area?: string,   // 전국=미전달, 시도=2자리, 시군구=4자리
+  cnt: number = 10
 ): Promise<OpinetTop10Response> {
-  return opinetFetch<OpinetTop10Response>("lowTop10.do", { prodcd, sido });
+  const params: Record<string, string | number> = { prodcd, cnt };
+  if (area) params.area = area;  // 전국일 때는 area 파라미터 전송하지 않음
+  return opinetFetch<OpinetTop10Response>("lowTop10.do", params);
 }
 
 /** 주유소 상세 정보 */
@@ -259,16 +266,16 @@ export async function fetchStationDetail(
   return opinetFetch<OpinetDetailResponse>("detailById.do", { id: uniId });
 }
 
-/** 시도 코드 목록 */
-export async function fetchSidoCodes(): Promise<OpinetSidoResponse> {
-  return opinetFetch<OpinetSidoResponse>("sido.do", { cnt: 20 });
+/** 시도 코드 목록 — areaCode.do (area 파라미터 없음 → 시도 목록 반환) */
+export async function fetchSidoCodes(): Promise<OpinetAreaResponse> {
+  return opinetFetch<OpinetAreaResponse>("areaCode.do", {});
 }
 
-/** 시군구 코드 목록 */
+/** 시군구 코드 목록 — areaCode.do?area={시도코드} */
 export async function fetchSigunCodes(
   sidocd: string
-): Promise<OpinetSigunResponse> {
-  return opinetFetch<OpinetSigunResponse>("sigun.do", { sidocd, cnt: 50 });
+): Promise<OpinetAreaResponse> {
+  return opinetFetch<OpinetAreaResponse>("areaCode.do", { area: sidocd });
 }
 
 // ─── 브랜드 매핑 유틸 ────────────────────────────────────────────────────────
