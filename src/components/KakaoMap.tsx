@@ -49,6 +49,12 @@ export default function KakaoMap({
     appkey: process.env.NEXT_PUBLIC_KAKAO_MAP_KEY!,
   });
 
+  // 선택된 주유소로 지도 중심 이동
+  const selectedStation = selectedId ? stations.find((s) => s.id === selectedId) : null;
+  const center = selectedStation
+    ? { lat: selectedStation.lat, lng: selectedStation.lng }
+    : { lat, lng };
+
   if (error) {
     return (
       <div className="relative w-full h-full bg-gray-100 flex flex-col items-center justify-center gap-2">
@@ -71,7 +77,7 @@ export default function KakaoMap({
 
   return (
     <Map
-      center={{ lat, lng }}
+      center={center}
       style={{ width: "100%", height: "100%" }}
       level={5}
     >

@@ -23,8 +23,8 @@ function getPriceDiff(price: number, avg?: number) {
   const diff = price - avg;
   if (Math.abs(diff) < 10) return { label: "평균", color: "text-gray-500" };
   return diff < 0
-    ? { label: `평균보다 ${Math.abs(diff)}원 저렴`, color: "text-emerald-600" }
-    : { label: `평균보다 ${Math.abs(diff)}원 비쌈`, color: "text-red-500" };
+    ? { label: `평균보다 ${Math.round(Math.abs(diff))}원 저렴`, color: "text-emerald-600" }
+    : { label: `평균보다 ${Math.round(Math.abs(diff))}원 비쌈`, color: "text-red-500" };
 }
 
 export default function StationCard({

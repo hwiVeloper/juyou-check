@@ -28,8 +28,8 @@ interface RankedStation extends Station {
 export default function Top10Page() {
   const [fuel, setFuel] = useState<FuelCode>("B027");
   // area: "" = 전국, "01"~"17" = 시도, "0101" etc. = 시군구 4자리
-  const [sidoArea, setSidoArea] = useState("");       // 시도 AREA_CD
-  const [sigunArea, setSigunArea] = useState("");     // 시군구 AREA_CD (2자리 sub-code)
+  const [sidoArea, setSidoArea] = useState("__all__");       // 시도 AREA_CD ("__all__" = 전국)
+  const [sigunArea, setSigunArea] = useState("__all__");     // 시군구 AREA_CD ("__all__" = 전체)
   const [sidoList, setSidoList] = useState<AreaItem[]>([]);
   const [sigunList, setSigunList] = useState<AreaItem[]>([]);
   const [stations, setStations] = useState<RankedStation[]>([]);
@@ -44,9 +44,9 @@ export default function Top10Page() {
 
   // 시도 변경 → 시군구 목록 로드
   useEffect(() => {
-    setSigunArea("");
+    setSigunArea("__all__");
     setSigunList([]);
-    if (!sidoArea) return;
+    if (sidoArea === "__all__") return;
     fetch(`/api/gas/codes/sigun?sidocd=${sidoArea}`)
       .then((r) => r.json())
       .then((d) => setSigunList(d.OIL ?? []));
@@ -57,7 +57,9 @@ export default function Top10Page() {
     setLoading(true);
 
     // area 결정: 시군구 선택 시 4자리(시도2+시군구2), 시도만 선택 시 2자리, 전국은 미전달
-    const area = sigunArea ? `${sidoArea}${sigunArea}` : sidoArea;
+    const sido = sidoArea === "__all__" ? "" : sidoArea;
+    const sigun = sigunArea === "__all__" ? "" : sigunArea;
+    const area = sigun ? `${sido}${sigun}` : sido;
 
     fetch(`/api/gas/top10?prodcd=${fuel}&area=${area}&cnt=10`)
       .then((r) => r.json())
@@ -65,8 +67,8 @@ export default function Top10Page() {
       .finally(() => setLoading(false));
   }, [fuel, sidoArea, sigunArea]);
 
-  const selectedSidoNm = sidoList.find((s) => s.AREA_CD === sidoArea)?.AREA_NM ?? "전국";
-  const selectedSigunNm = sigunList.find((s) => s.AREA_CD === sigunArea)?.AREA_NM;
+  const selectedSidoNm = sidoArea === "__all__" ? "전국" : (sidoList.find((s) => s.AREA_CD === sidoArea)?.AREA_NM ?? "전국");
+  const selectedSigunNm = sigunArea === "__all__" ? undefined : sigunList.find((s) => s.AREA_CD === sigunArea)?.AREA_NM;
 
   return (
     <div className="min-h-[100dvh] pb-20 bg-gray-50">
@@ -95,12 +97,12 @@ export default function Top10Page() {
         </Select>
 
         {/* 시도 */}
-        <Select value={sidoArea} onValueChange={(v) => { setSidoArea(v); setSigunArea(""); }}>
+        <Select value={sidoArea} onValueChange={(v) => { setSidoArea(v); setSigunArea("__all__"); }}>
           <SelectTrigger className="w-36 h-9 text-sm">
             <SelectValue placeholder="전국" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">전국</SelectItem>
+            <SelectItem value="__all__">전국</SelectItem>
             {sidoList.map((s) => (
               <SelectItem key={s.AREA_CD} value={s.AREA_CD}>{s.AREA_NM}</SelectItem>
             ))}
@@ -108,13 +110,13 @@ export default function Top10Page() {
         </Select>
 
         {/* 시군구 — 시도 선택 후 표시 */}
-        {sidoArea && sigunList.length > 0 && (
+        {sidoArea !== "__all__" && sigunList.length > 0 && (
           <Select value={sigunArea} onValueChange={setSigunArea}>
             <SelectTrigger className="w-36 h-9 text-sm">
               <SelectValue placeholder="전체" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">전체</SelectItem>
+              <SelectItem value="__all__">전체</SelectItem>
               {sigunList.map((s) => (
                 <SelectItem key={s.AREA_CD} value={s.AREA_CD}>{s.AREA_NM}</SelectItem>
               ))}
