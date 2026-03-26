@@ -1,65 +1,172 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { Locate, SlidersHorizontal, RefreshCw } from "lucide-react";
+import { useGeolocation } from "@/hooks/use-geolocation";
+import FuelFilter from "@/components/FuelFilter";
+import RadiusFilter from "@/components/RadiusFilter";
+import StationCard from "@/components/StationCard";
+import BottomSheet from "@/components/BottomSheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { FuelCode } from "@/lib/opinet";
+import type { Station } from "@/components/KakaoMap";
+
+// 카카오맵은 SSR 불필요
+const KakaoMap = dynamic(() => import("@/components/KakaoMap"), { ssr: false });
+
+const DEFAULT_LAT = 37.5665; // 서울 시청 (위치 허용 전 기본값)
+const DEFAULT_LNG = 126.978;
+
+export default function HomePage() {
+  const { latitude, longitude, loading: geoLoading, refetch } = useGeolocation();
+  const [stations, setStations] = useState<Station[]>([]);
+  const [avgPrice, setAvgPrice] = useState<number | undefined>();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fuel, setFuel] = useState<FuelCode>("B027");
+  const [radius, setRadius] = useState(3);
+  const [selectedId, setSelectedId] = useState<string | undefined>();
+  const [showFilter, setShowFilter] = useState(false);
+
+  const lat = latitude ?? DEFAULT_LAT;
+  const lng = longitude ?? DEFAULT_LNG;
+
+  const fetchStations = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [aroundRes, avgRes] = await Promise.all([
+        fetch(`/api/gas/around?lat=${lat}&lng=${lng}&radius=${radius}&prodcd=${fuel}`),
+        fetch(`/api/gas/avg-all?prodcd=${fuel}`),
+      ]);
+      const aroundData = await aroundRes.json();
+      const avgData = await avgRes.json();
+      setStations(aroundData.stations ?? []);
+      // Opinet PRICE 필드는 string으로 반환됨
+      const rawPrice = avgData.OIL?.find((o: {PRODCD: string; PRICE: string}) => o.PRODCD === fuel)?.PRICE;
+      setAvgPrice(rawPrice ? Number(rawPrice) : undefined);
+    } catch {
+      setError("주유소 정보를 불러오지 못했습니다. 다시 시도해 주세요.");
+    } finally {
+      setLoading(false);
+    }
+  }, [lat, lng, radius, fuel]);
+
+  useEffect(() => {
+    if (!geoLoading) fetchStations();
+  }, [geoLoading, fetchStations]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="relative flex flex-col h-[100dvh] overflow-hidden pb-14">
+      {/* 상단 헤더 */}
+      <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-sm border-b border-gray-100">
+        <h1 className="text-lg font-bold text-orange-500">⛽ 주유췍</h1>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowFilter((v) => !v)}
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="필터"
+          >
+            <SlidersHorizontal className="w-5 h-5 text-gray-600" />
+          </button>
+          <button
+            onClick={() => { refetch(); fetchStations(); }}
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="새로고침"
+          >
+            <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+      </header>
+
+      {/* 필터 드롭다운 (헤더 아래) */}
+      {showFilter && (
+        <div className="absolute top-14 left-0 right-0 z-10 bg-white border-b border-gray-100 px-4 py-3 flex flex-wrap gap-3 shadow-sm">
+          <FuelFilter value={fuel} onChange={(v) => { setFuel(v); setShowFilter(false); }} />
+          <RadiusFilter value={radius} onChange={(v) => { setRadius(v); setShowFilter(false); }} />
+        </div>
+      )}
+
+      {/* 지도 */}
+      <div className="flex-1">
+        <KakaoMap
+          lat={lat}
+          lng={lng}
+          stations={stations}
+          selectedId={selectedId}
+          onMarkerClick={(s) => setSelectedId(s.id)}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+
+        {/* 현위치 버튼 */}
+        <button
+          onClick={refetch}
+          className="absolute bottom-56 right-4 z-10 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-50 transition-colors"
+          aria-label="현위치"
+        >
+          <Locate className="w-5 h-5 text-gray-600" />
+        </button>
+      </div>
+
+      {/* 바텀 시트 */}
+      <BottomSheet
+        header={
+          <div className="flex items-center justify-between gap-2 py-1">
+            <FuelFilter value={fuel} onChange={setFuel} />
+            <RadiusFilter value={radius} onChange={setRadius} />
+          </div>
+        }
+      >
+        {/* 결과 요약 */}
+        <div className="px-4 py-2 bg-orange-50 flex items-center justify-between">
+          <span className="text-sm text-gray-700">
+            {loading ? "검색 중..." : `주유소 ${stations.length}개`}
+          </span>
+          {avgPrice && (
+            <span className="text-xs text-gray-500">
+              전국 평균 {avgPrice.toLocaleString()}원
+            </span>
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        {/* 에러 */}
+        {error && (
+          <div className="px-4 py-6 text-center text-sm text-red-500">{error}</div>
+        )}
+
+        {/* 로딩 스켈레톤 */}
+        {loading && !error && (
+          <div className="divide-y divide-gray-100">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-3">
+                <Skeleton className="w-10 h-10 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-48" />
+                </div>
+                <Skeleton className="h-6 w-16" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 주유소 목록 */}
+        {!loading && !error && stations.length === 0 && (
+          <div className="px-4 py-12 text-center text-sm text-gray-400">
+            반경 {radius}km 내 주유소가 없습니다.
+          </div>
+        )}
+
+        {!loading && stations.map((station) => (
+          <StationCard
+            key={station.id}
+            station={station}
+            avgPrice={avgPrice}
+            selected={selectedId === station.id}
+            onClick={() => setSelectedId(station.id === selectedId ? undefined : station.id)}
+          />
+        ))}
+      </BottomSheet>
     </div>
   );
 }
