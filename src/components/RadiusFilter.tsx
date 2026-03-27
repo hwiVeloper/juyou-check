@@ -12,7 +12,7 @@ interface RadiusFilterProps {
 export default function RadiusFilter({ value, onChange }: RadiusFilterProps) {
   return (
     <div className="flex items-center gap-1">
-      <span className="text-xs text-gray-500 shrink-0">반경</span>
+      <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">반경</span>
       <div className="flex gap-1">
         {RADII.map((r) => (
           <button
@@ -22,7 +22,7 @@ export default function RadiusFilter({ value, onChange }: RadiusFilterProps) {
               "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
               value === r
                 ? "bg-orange-500 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
             )}
           >
             {r}km

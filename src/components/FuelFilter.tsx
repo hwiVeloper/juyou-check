@@ -26,7 +26,7 @@ export default function FuelFilter({ value, onChange }: FuelFilterProps) {
             "shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
             value === fuel.code
               ? "bg-orange-500 text-white"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
           )}
         >
           {fuel.label}
