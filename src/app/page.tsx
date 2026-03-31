@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { Locate, RefreshCw, Heart, Clock, LayoutList } from "lucide-react";
+import { Locate, RefreshCw, Heart, Clock, LayoutList, MapPinPlus, Search, Trash2 } from "lucide-react";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useVisitHistory } from "@/hooks/useVisitHistory";
+import { useSavedLocations } from "@/hooks/useSavedLocations";
 import FuelFilter from "@/components/FuelFilter";
 import RadiusFilter from "@/components/RadiusFilter";
 import SortToggle, { type SortOrder } from "@/components/SortToggle";
@@ -14,6 +15,14 @@ import ThemeToggle from "@/components/ThemeToggle";
 import StationCard from "@/components/StationCard";
 import BottomSheet from "@/components/BottomSheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { FuelCode } from "@/lib/opinet";
 import type { Station } from "@/components/KakaoMap";
@@ -34,6 +43,7 @@ export default function HomePage() {
   } = useGeolocation();
   const { favorites, toggle: toggleFavorite, isFavorite } = useFavorites();
   const { history, addVisit } = useVisitHistory();
+  const { locations, add: addLocation, remove: removeLocation } = useSavedLocations();
 
   const [stations, setStations] = useState<Station[]>([]);
   const [avgPrice, setAvgPrice] = useState<number | undefined>();
@@ -47,8 +57,24 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const lat = latitude ?? DEFAULT_LAT;
-  const lng = longitude ?? DEFAULT_LNG;
+  // 현재 검색 기준 위치
+  const [searchCenter, setSearchCenter] = useState<{ lat: number; lng: number }>({
+    lat: DEFAULT_LAT,
+    lng: DEFAULT_LNG,
+  });
+  // 지도 드래그 후 아직 확정되지 않은 위치
+  const [pendingCenter, setPendingCenter] = useState<{ lat: number; lng: number } | null>(null);
+
+  // 저장된 위치 Dialog 상태
+  const [locationDialogOpen, setLocationDialogOpen] = useState(false);
+  const [locationName, setLocationName] = useState("");
+
+  // 지오로케이션 완료 시 searchCenter 동기화
+  useEffect(() => {
+    if (!geoLoading && latitude != null && longitude != null) {
+      setSearchCenter({ lat: latitude, lng: longitude });
+    }
+  }, [geoLoading, latitude, longitude]);
 
   const fetchStations = useCallback(async () => {
     setLoading(true);
@@ -57,7 +83,7 @@ export default function HomePage() {
     try {
       const [aroundRes, avgRes] = await Promise.all([
         fetch(
-          `/api/gas/around?lat=${lat}&lng=${lng}&radius=${radius}&prodcd=${fuel}`
+          `/api/gas/around?lat=${searchCenter.lat}&lng=${searchCenter.lng}&radius=${radius}&prodcd=${fuel}`
         ),
         fetch(`/api/gas/avg-all?prodcd=${fuel}`),
       ]);
@@ -82,7 +108,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [lat, lng, radius, fuel]);
+  }, [searchCenter.lat, searchCenter.lng, radius, fuel]);
 
   useEffect(() => {
     if (!geoLoading) fetchStations();
@@ -151,6 +177,14 @@ export default function HomePage() {
     });
   };
 
+  const handleSaveCurrentLocation = () => {
+    const name = locationName.trim();
+    if (!name) return;
+    addLocation(name, searchCenter.lat, searchCenter.lng);
+    setLocationName("");
+    setLocationDialogOpen(false);
+  };
+
   // 방문기록 탭: localStorage 기록 전체 (현재 검색 반경 무관)
   const historyStations: (Station & { visitedAt: number })[] = history.map(
     (r) => ({
@@ -193,6 +227,82 @@ export default function HomePage() {
         <h1 className="text-lg font-bold text-orange-500">⛽ 주유췤</h1>
         <div className="flex items-center gap-1">
           <ThemeToggle />
+          {/* 저장된 위치 관리 버튼 */}
+          <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
+            <DialogTrigger asChild>
+              <button
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                aria-label="위치 저장"
+              >
+                <MapPinPlus className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              </button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>저장된 위치</DialogTitle>
+              </DialogHeader>
+
+              {/* 현재 위치 저장 */}
+              <div className="space-y-2 mb-4">
+                <p className="text-xs text-gray-500 dark:text-gray-400">현재 검색 위치를 저장</p>
+                <div className="flex gap-2">
+                  <div className="flex gap-1.5">
+                    {["집", "직장"].map((preset) => (
+                      <button
+                        key={preset}
+                        onClick={() => setLocationName(preset)}
+                        className={cn(
+                          "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                          locationName === preset
+                            ? "bg-orange-500 text-white border-orange-500"
+                            : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-orange-300"
+                        )}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                  <Input
+                    value={locationName}
+                    onChange={(e) => setLocationName(e.target.value)}
+                    placeholder="이름 직접 입력"
+                    className="flex-1 h-8 text-xs"
+                    onKeyDown={(e) => e.key === "Enter" && handleSaveCurrentLocation()}
+                  />
+                </div>
+                <button
+                  onClick={handleSaveCurrentLocation}
+                  disabled={!locationName.trim()}
+                  className="w-full py-2 rounded-lg bg-orange-500 text-white text-sm font-medium disabled:opacity-40 hover:bg-orange-600 transition-colors"
+                >
+                  현재 위치 저장
+                </button>
+              </div>
+
+              {/* 저장된 위치 목록 */}
+              {locations.length > 0 && (
+                <div className="border-t border-gray-100 dark:border-gray-800 pt-3 space-y-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">저장된 위치</p>
+                  {locations.map((loc) => (
+                    <div
+                      key={loc.id}
+                      className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800"
+                    >
+                      <span className="text-sm text-gray-700 dark:text-gray-300">📍 {loc.name}</span>
+                      <button
+                        onClick={() => removeLocation(loc.id)}
+                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        aria-label="삭제"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-gray-400" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
           <button
             onClick={() => {
               refetch();
@@ -215,19 +325,37 @@ export default function HomePage() {
         {/* KakaoMap이 absolute로 꽉 채움 */}
         <div className="absolute inset-0">
           <KakaoMap
-            lat={lat}
-            lng={lng}
+            lat={searchCenter.lat}
+            lng={searchCenter.lng}
             stations={stations}
             selectedId={selectedId}
             onMarkerClick={(s) => setSelectedId(s.id)}
+            onDragEnd={(newLat, newLng) => setPendingCenter({ lat: newLat, lng: newLng })}
           />
         </div>
+
+        {/* 지도 이동 후 "이 지역에서 검색" 버튼 */}
+        {pendingCenter && (
+          <button
+            onClick={() => {
+              setSearchCenter(pendingCenter);
+              setPendingCenter(null);
+            }}
+            className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-white dark:bg-gray-800 shadow-md rounded-full px-4 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 flex items-center gap-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <Search className="w-3.5 h-3.5" /> 이 지역에서 검색
+          </button>
+        )}
 
         {/* 현위치 버튼 */}
         <button
           onClick={() => {
             setSelectedId(undefined);
+            setPendingCenter(null);
             refetch();
+            if (latitude != null && longitude != null) {
+              setSearchCenter({ lat: latitude, lng: longitude });
+            }
           }}
           className="absolute bottom-4 right-4 z-10 w-10 h-10 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           aria-label="현위치"
@@ -247,6 +375,24 @@ export default function HomePage() {
       <BottomSheet
         header={
           <div>
+            {/* Row 0: 저장된 위치 칩 (있을 때만) */}
+            {locations.length > 0 && (
+              <div className="flex items-center gap-2 pt-1 pb-0.5 overflow-x-auto scrollbar-hide">
+                {locations.map((loc) => (
+                  <button
+                    key={loc.id}
+                    onClick={() => {
+                      setSearchCenter({ lat: loc.lat, lng: loc.lng });
+                      setPendingCenter(null);
+                    }}
+                    className="shrink-0 flex items-center gap-1 text-xs px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-950/50 transition-colors"
+                  >
+                    📍 {loc.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Row 1: 연료/반경 필터 + 정렬 */}
             <div className="flex items-center justify-between gap-2 py-1">
               <FuelFilter value={fuel} onChange={setFuel} />

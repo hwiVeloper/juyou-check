@@ -22,6 +22,7 @@ interface KakaoMapProps {
   stations: Station[];
   selectedId?: string;
   onMarkerClick?: (station: Station) => void;
+  onDragEnd?: (lat: number, lng: number) => void;
 }
 
 const BRAND_BG: Record<string, string> = {
@@ -44,6 +45,7 @@ export default function KakaoMap({
   stations,
   selectedId,
   onMarkerClick,
+  onDragEnd,
 }: KakaoMapProps) {
   const [loading, error] = useKakaoLoader({
     appkey: process.env.NEXT_PUBLIC_KAKAO_MAP_KEY!,
@@ -81,6 +83,10 @@ export default function KakaoMap({
       isPanto
       style={{ width: "100%", height: "100%" }}
       level={5}
+      onDragEnd={(map) => {
+        const c = map.getCenter();
+        onDragEnd?.(c.getLat(), c.getLng());
+      }}
     >
       {stations.map((station) => {
         const isSelected = station.id === selectedId;
