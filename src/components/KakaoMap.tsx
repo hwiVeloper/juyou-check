@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useEffect } from "react";
 import { Map, CustomOverlayMap, useKakaoLoader } from "react-kakao-maps-sdk";
 import { MapPin } from "lucide-react";
 
@@ -51,6 +52,20 @@ export default function KakaoMap({
     appkey: process.env.NEXT_PUBLIC_KAKAO_MAP_KEY!,
   });
 
+  const mapInstanceRef = useRef<kakao.maps.Map | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // 컨테이너 크기 변화 감지 → relayout() 호출
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      mapInstanceRef.current?.relayout();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   // 선택된 주유소로 지도 중심 이동
   const selectedStation = selectedId ? stations.find((s) => s.id === selectedId) : null;
   const center = selectedStation
@@ -59,7 +74,7 @@ export default function KakaoMap({
 
   if (error) {
     return (
-      <div className="relative w-full h-full bg-gray-100 flex flex-col items-center justify-center gap-2">
+      <div ref={containerRef} className="relative w-full h-full bg-gray-100 flex flex-col items-center justify-center gap-2">
         <MapPin className="text-gray-300 w-10 h-10" />
         <p className="text-xs text-gray-400 text-center px-4">
           카카오맵을 불러올 수 없습니다.<br />
@@ -71,57 +86,60 @@ export default function KakaoMap({
 
   if (loading) {
     return (
-      <div className="relative w-full h-full bg-gray-100 flex items-center justify-center">
+      <div ref={containerRef} className="relative w-full h-full bg-gray-100 flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <Map
-      center={center}
-      isPanto
-      style={{ width: "100%", height: "100%" }}
-      level={5}
-      onDragEnd={(map) => {
-        const c = map.getCenter();
-        onDragEnd?.(c.getLat(), c.getLng());
-      }}
-    >
-      {stations.map((station) => {
-        const isSelected = station.id === selectedId;
-        const bg = getBrandBg(station.brandCode);
+    <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
+      <Map
+        center={center}
+        isPanto
+        style={{ width: "100%", height: "100%" }}
+        level={5}
+        onCreate={(map) => { mapInstanceRef.current = map; }}
+        onDragEnd={(map) => {
+          const c = map.getCenter();
+          onDragEnd?.(c.getLat(), c.getLng());
+        }}
+      >
+        {stations.map((station) => {
+          const isSelected = station.id === selectedId;
+          const bg = getBrandBg(station.brandCode);
 
-        return (
-          <CustomOverlayMap
-            key={station.id}
-            position={{ lat: station.lat, lng: station.lng }}
-            yAnchor={1.5}
-            zIndex={isSelected ? 10 : 1}
-          >
-            <div
-              onClick={() => onMarkerClick?.(station)}
-              style={{
-                background: isSelected ? bg : "white",
-                color: isSelected ? "white" : "#111",
-                border: `2px solid ${bg}`,
-                borderRadius: "999px",
-                padding: "4px 10px",
-                fontSize: "12px",
-                fontWeight: 700,
-                whiteSpace: "nowrap",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-                cursor: "pointer",
-                userSelect: "none",
-              }}
+          return (
+            <CustomOverlayMap
+              key={station.id}
+              position={{ lat: station.lat, lng: station.lng }}
+              yAnchor={1.5}
+              zIndex={isSelected ? 10 : 1}
             >
-              {station.price > 0
-                ? `${station.price.toLocaleString()}원`
-                : station.name}
-            </div>
-          </CustomOverlayMap>
-        );
-      })}
-    </Map>
+              <div
+                onClick={() => onMarkerClick?.(station)}
+                style={{
+                  background: isSelected ? bg : "white",
+                  color: isSelected ? "white" : "#111",
+                  border: `2px solid ${bg}`,
+                  borderRadius: "999px",
+                  padding: "4px 10px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+              >
+                {station.price > 0
+                  ? `${station.price.toLocaleString()}원`
+                  : station.name}
+              </div>
+            </CustomOverlayMap>
+          );
+        })}
+      </Map>
+    </div>
   );
 }
