@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import BottomNav from "@/components/BottomNav";
+import AdBanner from "@/components/AdBanner";
 import ThemeProvider from "@/components/ThemeProvider";
 import "./globals.css";
 
@@ -50,9 +52,31 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        {process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID && (
+          <Script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}`}
+            crossOrigin="anonymous"
+            strategy="afterInteractive"
+          />
+        )}
+      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>
           {children}
+          {process.env.NEXT_PUBLIC_ADSENSE_AD_SLOT && (
+            <div
+              className="fixed bottom-14 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800"
+              style={{ paddingBottom: 0 }}
+            >
+              <AdBanner
+                adSlot={process.env.NEXT_PUBLIC_ADSENSE_AD_SLOT}
+                adFormat="horizontal"
+                fullWidthResponsive={true}
+              />
+            </div>
+          )}
           <BottomNav />
         </ThemeProvider>
       </body>

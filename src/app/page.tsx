@@ -221,7 +221,7 @@ export default function HomePage() {
 
   return (
     // relative: 클립보드 토스트 위치 기준
-    <div className="relative flex flex-col h-[100dvh] overflow-hidden pb-14">
+    <div className="relative flex flex-col h-[100dvh] overflow-hidden pb-28">
       {/* ── 헤더 (flex flow, not absolute) ── */}
       <header className="shrink-0 flex items-center justify-between px-4 py-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800 z-10">
         <h1 className="text-lg font-bold text-orange-500">⛽ 주유췤</h1>

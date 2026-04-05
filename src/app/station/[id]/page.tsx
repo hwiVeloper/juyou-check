@@ -99,7 +99,7 @@ export default function StationDetailPage({
     : null;
 
   return (
-    <div className="min-h-[100dvh] pb-20 bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-[100dvh] pb-32 bg-gray-50 dark:bg-gray-950">
       {/* 헤더 */}
       <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-4 py-3 flex items-center gap-3">
         <button
