@@ -66,16 +66,12 @@ export default function RootLayout({
         <ThemeProvider>
           {children}
           {process.env.NEXT_PUBLIC_ADSENSE_AD_SLOT && (
-            <div
+            <AdBanner
+              adSlot={process.env.NEXT_PUBLIC_ADSENSE_AD_SLOT}
+              adFormat="horizontal"
+              fullWidthResponsive={true}
               className="fixed bottom-14 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800"
-              style={{ paddingBottom: 0 }}
-            >
-              <AdBanner
-                adSlot={process.env.NEXT_PUBLIC_ADSENSE_AD_SLOT}
-                adFormat="horizontal"
-                fullWidthResponsive={true}
-              />
-            </div>
+            />
           )}
           <BottomNav />
         </ThemeProvider>

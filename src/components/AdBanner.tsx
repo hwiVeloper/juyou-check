@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface AdBannerProps {
   adSlot: string;
@@ -21,8 +21,9 @@ export default function AdBanner({
   fullWidthResponsive = true,
   className,
 }: AdBannerProps) {
-  const adRef = useRef<HTMLDivElement>(null);
+  const insRef = useRef<HTMLModElement>(null);
   const pushed = useRef(false);
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     if (pushed.current) return;
@@ -30,13 +31,31 @@ export default function AdBanner({
       (window.adsbygoogle = window.adsbygoogle || []).push({});
       pushed.current = true;
     } catch {
-      // AdSense not loaded yet
+      setVisible(false);
+      return;
     }
+
+    const ins = insRef.current;
+    if (!ins) return;
+
+    const observer = new MutationObserver(() => {
+      const status = ins.getAttribute("data-ad-status");
+      if (status === "unfilled") {
+        setVisible(false);
+      }
+    });
+
+    observer.observe(ins, { attributes: true, attributeFilter: ["data-ad-status"] });
+
+    return () => observer.disconnect();
   }, []);
 
+  if (!visible) return null;
+
   return (
-    <div ref={adRef} className={className}>
+    <div className={className}>
       <ins
+        ref={insRef}
         className="adsbygoogle"
         style={{ display: "block" }}
         data-ad-client={process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}
