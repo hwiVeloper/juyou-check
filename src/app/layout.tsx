@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import BottomNav from "@/components/BottomNav";
 import AdBanner from "@/components/AdBanner";
 import ThemeProvider from "@/components/ThemeProvider";
+import { AdProvider } from "@/contexts/AdContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -64,16 +65,18 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>
-          {children}
-          {process.env.NEXT_PUBLIC_ADSENSE_AD_SLOT && (
-            <AdBanner
-              adSlot={process.env.NEXT_PUBLIC_ADSENSE_AD_SLOT}
-              adFormat="horizontal"
-              fullWidthResponsive={true}
-              className="fixed bottom-14 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800"
-            />
-          )}
-          <BottomNav />
+          <AdProvider>
+            {children}
+            {process.env.NEXT_PUBLIC_ADSENSE_AD_SLOT && (
+              <AdBanner
+                adSlot={process.env.NEXT_PUBLIC_ADSENSE_AD_SLOT}
+                adFormat="horizontal"
+                fullWidthResponsive={true}
+                className="fixed bottom-14 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800"
+              />
+            )}
+            <BottomNav />
+          </AdProvider>
         </ThemeProvider>
       </body>
     </html>

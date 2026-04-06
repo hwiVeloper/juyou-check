@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAd } from "@/contexts/AdContext";
 
 interface AdBannerProps {
   adSlot: string;
@@ -24,6 +25,7 @@ export default function AdBanner({
   const insRef = useRef<HTMLModElement>(null);
   const pushed = useRef(false);
   const [visible, setVisible] = useState(true);
+  const { setAdVisible } = useAd();
 
   useEffect(() => {
     if (pushed.current) return;
@@ -32,6 +34,7 @@ export default function AdBanner({
       pushed.current = true;
     } catch {
       setVisible(false);
+      setAdVisible(false);
       return;
     }
 
@@ -40,15 +43,18 @@ export default function AdBanner({
 
     const observer = new MutationObserver(() => {
       const status = ins.getAttribute("data-ad-status");
-      if (status === "unfilled") {
+      if (status === "filled") {
+        setAdVisible(true);
+      } else if (status === "unfilled") {
         setVisible(false);
+        setAdVisible(false);
       }
     });
 
     observer.observe(ins, { attributes: true, attributeFilter: ["data-ad-status"] });
 
     return () => observer.disconnect();
-  }, []);
+  }, [setAdVisible]);
 
   if (!visible) return null;
 

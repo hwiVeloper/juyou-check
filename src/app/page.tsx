@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useAd } from "@/contexts/AdContext";
 import type { FuelCode } from "@/lib/opinet";
 import type { Station } from "@/components/KakaoMap";
 
@@ -44,6 +45,7 @@ export default function HomePage() {
   const { favorites, toggle: toggleFavorite, isFavorite } = useFavorites();
   const { history, addVisit } = useVisitHistory();
   const { locations, add: addLocation, remove: removeLocation } = useSavedLocations();
+  const { adVisible } = useAd();
 
   const [stations, setStations] = useState<Station[]>([]);
   const [avgPrice, setAvgPrice] = useState<number | undefined>();
@@ -221,7 +223,7 @@ export default function HomePage() {
 
   return (
     // relative: 클립보드 토스트 위치 기준
-    <div className="relative flex flex-col h-[100dvh] overflow-hidden pb-28">
+    <div className={cn("relative flex flex-col h-[100dvh] overflow-hidden", adVisible ? "pb-28" : "pb-14")}>
       {/* ── 헤더 (flex flow, not absolute) ── */}
       <header className="shrink-0 flex items-center justify-between px-4 py-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800 z-10">
         <h1 className="text-lg font-bold text-orange-500">⛽ 주유췤</h1>
