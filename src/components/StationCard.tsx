@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MapPin, Navigation, Heart, Share2, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { event as gtagEvent } from "@/lib/gtag";
 import type { Station } from "./KakaoMap";
 
 interface StationCardProps {
@@ -185,7 +186,13 @@ export default function StationCard({
           {/* 상세보기 (Info 아이콘) */}
           <Link
             href={`/station/${station.id}`}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              gtagEvent("view_station", {
+                station_id: station.id,
+                station_name: station.name,
+              });
+            }}
             className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             aria-label="상세보기"
           >
