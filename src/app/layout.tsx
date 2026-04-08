@@ -5,6 +5,7 @@ import BottomNav from "@/components/BottomNav";
 import AdBanner from "@/components/AdBanner";
 import ThemeProvider from "@/components/ThemeProvider";
 import { AdProvider } from "@/contexts/AdContext";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -62,9 +63,26 @@ export default function RootLayout({
             strategy="afterInteractive"
           />
         )}
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4-init" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}');
+              `}
+            </Script>
+          </>
+        )}
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>
+          <GoogleAnalytics />
           <AdProvider>
             {children}
             {process.env.NEXT_PUBLIC_ADSENSE_AD_SLOT && (
