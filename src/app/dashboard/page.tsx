@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { TrendingUp, TrendingDown, Minus, BarChart2 } from "lucide-react";
+import { event as gtagEvent } from "@/lib/gtag";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,6 +61,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setLoading(true);
+    gtagEvent("tab_change", { tab_name: fuel });
     const safe = (p: Promise<Response>) =>
       p.then((r) => r.json()).catch(() => ({ OIL: [] }));
     Promise.all([
