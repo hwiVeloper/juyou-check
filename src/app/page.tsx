@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { event as gtagEvent } from "@/lib/gtag";
 import { useAd } from "@/contexts/AdContext";
 import type { FuelCode } from "@/lib/opinet";
 import type { Station } from "@/components/KakaoMap";
@@ -80,6 +81,12 @@ export default function HomePage() {
 
   const fetchStations = useCallback(async () => {
     setLoading(true);
+    gtagEvent("search_station", {
+      fuel_type: fuel,
+      radius: String(radius),
+      lat: String(searchCenter.lat),
+      lng: String(searchCenter.lng),
+    });
     setError(null);
     setSelectedBrands(new Set()); // 새 검색 시 브랜드 필터 초기화
     try {
