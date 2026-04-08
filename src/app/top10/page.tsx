@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Trophy } from "lucide-react";
+import { event as gtagEvent } from "@/lib/gtag";
 import {
   Select,
   SelectContent,
@@ -58,6 +59,10 @@ export default function Top10Page() {
     setLoading(true);
     const sido = sidoArea === "__all__" ? "" : sidoArea;
     const sigun = sigunArea === "__all__" ? "" : sigunArea;
+    gtagEvent("view_top10", {
+      fuel_type: fuel,
+      area: sido || "전국",
+    });
     const area = sigun || sido;
 
     fetch(`/api/gas/top10?prodcd=${fuel}&area=${area}&cnt=10`)
